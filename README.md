@@ -41,6 +41,6 @@ The **AI Credit Builder Simulator** introduces a truly unique approach to credit
 - **Back-End:** Node.js
 - **Database:** Supabase
 - **AI/ML:** OpenAI API, rule-based credit scoring engine  
-- **Tools:** GitHub, Vercel  
+- **Tools:** GitHub, Vercel, Figma
 
 
