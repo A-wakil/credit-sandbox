@@ -37,10 +37,10 @@ The **AI Credit Builder Simulator** introduces a truly unique approach to credit
 ---
 
 ## Tech Stack
-- **Front-End:** React / Next.js, TailwindCSS  
-- **Back-End:** Node.js, Express, Python (for modeling logic)  
-- **Database:** Supabase or PostgreSQL  
+- **Front-End:** React / Next.js
+- **Back-End:** Node.js
+- **Database:** Supabase
 - **AI/ML:** OpenAI API, rule-based credit scoring engine  
-- **Tools:** GitHub, Vercel, Figma  
+- **Tools:** GitHub, Vercel  
 
 
