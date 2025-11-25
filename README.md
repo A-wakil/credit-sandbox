@@ -65,18 +65,38 @@ Alternatively, you can use yarn:
 yarn install
 ```
 
-### 3. Set Up Environment Variables
+### 3. Set Up Database
+
+This application uses Supabase for authentication and data persistence. Follow the complete database setup guide:
+
+**📖 [Complete Database Setup Guide](./DATABASE_SETUP_GUIDE.md)**
+
+Quick summary:
+1. Create a free Supabase account at [supabase.com](https://supabase.com)
+2. Create a new project
+3. Run the SQL scripts to create tables (see [DATABASE_SCHEMA.md](./DATABASE_SCHEMA.md))
+4. Get your API keys from Supabase dashboard
+
+### 4. Set Up Environment Variables
 
 Create a `.env.local` file in the root directory and add your environment variables:
 
 ```bash
-# Add your environment variables here
+# Supabase Configuration (required)
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+
+# OpenAI API (optional)
 OPENAI_API_KEY=your_openai_api_key
+
+# App URL
+NEXT_PUBLIC_APP_URL=http://localhost:3000
 ```
 
-### 4. Run the Development Server
+See [ENVIRONMENT_SETUP.md](./ENVIRONMENT_SETUP.md) for detailed instructions on getting these values.
+
+### 5. Run the Development Server
 
 Start the development server:
 
@@ -102,11 +122,32 @@ Or with bun:
 bun dev
 ```
 
-### 5. Open in Browser
+### 6. Open in Browser
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the application.
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+
+## Database Documentation
+
+This project uses Supabase (PostgreSQL) for data persistence and authentication:
+
+- **[DATABASE_SETUP_GUIDE.md](./DATABASE_SETUP_GUIDE.md)** - Step-by-step setup instructions
+- **[DATABASE_SCHEMA.md](./DATABASE_SCHEMA.md)** - Complete schema documentation, tables, and relationships
+- **[ENVIRONMENT_SETUP.md](./ENVIRONMENT_SETUP.md)** - Environment variables configuration
+
+### Database Tables
+
+The application includes the following tables:
+- `user_profiles` - User account information and preferences
+- `credit_profiles` - User's credit profile data (payment history, utilization, etc.)
+- `simulations` - Saved simulation sessions
+- `scenarios` - Individual financial scenarios in simulations
+- `timeline_projections` - Projected credit score timelines
+- `user_activity_log` - User action tracking and analytics
+- `saved_improvement_plans` - Personalized improvement plans
+
+All tables include Row Level Security (RLS) policies to ensure users can only access their own data.
 
 ## Learn More
 

@@ -1,15 +1,31 @@
 "use client"
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { CreditScoreDisplay } from '../components/CreditScoreDisplay';
 import { ScenarioBuilder } from '../components/ScenarioBuilder';
 import { ScoreTimeline } from '../components/ScoreTimeline';
 import { ScenarioCard } from '../components/ScenarioCard';
-import { ExplanationPanel } from '../components/ExplanationPanel';
-import { RiskAnalysis } from '../components/RiskAnalysis';
-import { ImprovementPlan } from '../components/ImprovementPlan';
+import { AIAnalysisPanel } from '../components/AIAnalysisPanel';
+import { AIRiskAnalysis } from '../components/AIRiskAnalysis';
+import { AIActionPlan } from '../components/AIActionPlan';
+import { SimulationHistory } from '../components/SimulationHistory';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
-import { TrendingUp } from 'lucide-react';
+import { TrendingUp, Save, Loader2, RefreshCw } from 'lucide-react';
+import { ProtectedRoute } from '../components/ProtectedRoute';
+import { UserNav } from '../components/UserNav';
+import { useAuth } from '@/lib/auth-context';
+import { 
+  createSimulation, 
+  getSimulationWithScenarios,
+  addScenario as addScenarioDB,
+  removeScenario as removeScenarioDB,
+  createCreditProfile,
+  getActiveCreditProfile,
+  logActivity
+} from '@/lib/supabase/actions';
+import { Button } from '@/components/ui/button';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { createSupabaseClient } from '@/lib/supabase/client';
 
 export interface Scenario {
   id: string;
@@ -67,12 +83,100 @@ function calculateScoreImpact(scenarios: Scenario[], baseScore: number): {
   };
 }
 
-export default function Home() {
-  const [baseScore] = useState(680);
+function HomePage() {
+  const { user } = useAuth();
+  const [baseScore, setBaseScore] = useState(680);
+  const [editingScore, setEditingScore] = useState(false);
+  const [tempScore, setTempScore] = useState('680');
   const [scenarios, setScenarios] = useState<Scenario[]>([]);
   const [selectedScenario, setSelectedScenario] = useState<Scenario | null>(null);
+  const [simulationId, setSimulationId] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [saveMessage, setSaveMessage] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
   
-  const { currentScore, timeline, totalImpact } = calculateScoreImpact(scenarios, baseScore);
+  const { currentScore, timeline, totalImpact} = calculateScoreImpact(scenarios, baseScore);
+
+  const handleScoreUpdate = () => {
+    const score = parseInt(tempScore);
+    if (score >= 300 && score <= 850) {
+      setBaseScore(score);
+      setEditingScore(false);
+    }
+  };
+
+  // Load user's credit profile and latest simulation on mount
+  useEffect(() => {
+    if (!user) return;
+    
+    const loadUserData = async () => {
+      try {
+        // Get or create credit profile
+        let profile = await getActiveCreditProfile(user.id);
+        
+        if (!profile) {
+          // Create initial profile
+          profile = await createCreditProfile({
+            user_id: user.id,
+            current_score: 680,
+            score_model: 'FICO',
+            is_active: true,
+          });
+          setBaseScore(680);
+        } else {
+          setBaseScore(profile.current_score || 680);
+        }
+
+        // Load most recent simulation
+        const supabase = createSupabaseClient();
+        const { data: recentSimulation } = await supabase
+          .from('simulations')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('status', 'active')
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (recentSimulation) {
+          // Load scenarios for this simulation
+          const { data: scenariosData } = await supabase
+            .from('scenarios')
+            .select('*')
+            .eq('simulation_id', recentSimulation.id)
+            .order('display_order', { ascending: true });
+
+          if (scenariosData && scenariosData.length > 0) {
+            // Restore the simulation
+            setSimulationId(recentSimulation.id);
+            const loadedScenarios: Scenario[] = scenariosData.map((s: any) => ({
+              id: s.id,
+              type: s.scenario_type,
+              action: s.action_name,
+              impact: s.impact_points,
+              timeframe: s.timeframe_months,
+              description: s.description || '',
+              addedAt: new Date(s.created_at),
+            }));
+            setScenarios(loadedScenarios);
+          }
+        }
+
+        // Log activity
+        await logActivity(user.id, 'page_view', {
+          resourceType: 'page',
+          metadata: { page: 'home' }
+        });
+        
+        setLoading(false);
+      } catch (error) {
+        console.error('Error loading user data:', error);
+        setLoading(false);
+      }
+    };
+
+    loadUserData();
+  }, [user]);
   
   const addScenario = (scenario: Omit<Scenario, 'id' | 'addedAt'>) => {
     const newScenario: Scenario = {
@@ -93,24 +197,235 @@ export default function Home() {
   const clearAllScenarios = () => {
     setScenarios([]);
     setSelectedScenario(null);
+    setSimulationId(null);
   };
+
+  const saveSimulation = async () => {
+    if (!user || scenarios.length === 0) return;
+    
+    setSaving(true);
+    setSaveMessage(null);
+
+    try {
+      // Archive old simulation first
+      if (simulationId) {
+        const supabase = createSupabaseClient();
+        await supabase
+          .from('simulations')
+          .update({ status: 'archived' })
+          .eq('id', simulationId);
+      }
+
+      // Create new simulation
+      const simulation = await createSimulation({
+        user_id: user.id,
+        name: `Simulation ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`,
+        base_score: baseScore,
+        projected_score: currentScore,
+        status: 'active',
+        simulation_data: {
+          totalImpact,
+          scenarioCount: scenarios.length,
+        },
+      });
+
+      setSimulationId(simulation.id);
+
+      // Save each scenario
+      for (let i = 0; i < scenarios.length; i++) {
+        const scenario = scenarios[i];
+        await addScenarioDB({
+          user_id: user.id,
+          simulation_id: simulation.id,
+          scenario_type: scenario.type,
+          action_name: scenario.action,
+          impact_points: scenario.impact,
+          timeframe_months: scenario.timeframe,
+          display_order: i,
+          description: scenario.description,
+        });
+      }
+
+      // Log activity
+      await logActivity(user.id, 'simulation_created', {
+        resourceType: 'simulation',
+        resourceId: simulation.id,
+        metadata: { scenarioCount: scenarios.length }
+      });
+
+      setSaveMessage('Simulation saved! It will automatically load when you return.');
+      setTimeout(() => setSaveMessage(null), 3000);
+    } catch (error) {
+      console.error('Error saving simulation:', error);
+      setSaveMessage('Failed to save simulation');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const startNewSimulation = () => {
+    setScenarios([]);
+    setSelectedScenario(null);
+    setSimulationId(null);
+    setSaveMessage('Started new simulation');
+    setTimeout(() => setSaveMessage(null), 2000);
+  };
+
+  const loadSimulation = async (id: string) => {
+    setLoading(true);
+    try {
+      const supabase = createSupabaseClient();
+      
+      // Load simulation
+      const { data: simulation } = await supabase
+        .from('simulations')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (!simulation) {
+        setSaveMessage('Simulation not found');
+        return;
+      }
+
+      // Load scenarios
+      const { data: scenariosData } = await supabase
+        .from('scenarios')
+        .select('*')
+        .eq('simulation_id', id)
+        .order('display_order', { ascending: true });
+
+      if (scenariosData) {
+        setSimulationId(simulation.id);
+        setBaseScore(simulation.base_score);
+        const loadedScenarios: Scenario[] = scenariosData.map((s: any) => ({
+          id: s.id,
+          type: s.scenario_type,
+          action: s.action_name,
+          impact: s.impact_points,
+          timeframe: s.timeframe_months,
+          description: s.description || '',
+          addedAt: new Date(s.created_at),
+        }));
+        setScenarios(loadedScenarios);
+        setSaveMessage('Simulation loaded successfully');
+        setTimeout(() => setSaveMessage(null), 2000);
+      }
+    } catch (error) {
+      console.error('Error loading simulation:', error);
+      setSaveMessage('Failed to load simulation');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+      </div>
+    );
+  }
   
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
       <div className="container mx-auto px-4 py-8 max-w-7xl">
         {/* Header */}
         <div className="mb-8">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg">
-              <TrendingUp className="size-6 text-white" />
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg">
+                <TrendingUp className="size-6 text-white" />
+              </div>
+              <div>
+                <h1 className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600">
+                  AI Credit Sandbox
+                </h1>
+              </div>
             </div>
-            <h1 className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600">
-              AI Credit Sandbox
-            </h1>
+            <div className="flex items-center gap-3">
+              <SimulationHistory 
+                onLoadSimulation={loadSimulation}
+                currentSimulationId={simulationId}
+              />
+              {scenarios.length > 0 && (
+                <Button 
+                  onClick={startNewSimulation} 
+                  variant="outline"
+                  disabled={saving}
+                >
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  New
+                </Button>
+              )}
+              <Button 
+                onClick={saveSimulation} 
+                disabled={saving || scenarios.length === 0}
+                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+              >
+                {saving ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="mr-2 h-4 w-4" />
+                    {simulationId ? 'Update' : 'Save'}
+                  </>
+                )}
+              </Button>
+              <UserNav />
+            </div>
           </div>
-          <p className="text-gray-600">
-            Explore how different financial decisions could hypothetically impact your U.S. credit score
-          </p>
+          {saveMessage && (
+            <Alert className="mb-4 bg-green-50 border-green-200">
+              <AlertDescription className="text-green-800">
+                {saveMessage}
+              </AlertDescription>
+            </Alert>
+          )}
+          <div className="flex items-center gap-4">
+            <p className="text-gray-600">
+              Starting Credit Score:
+            </p>
+            {editingScore ? (
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  min="300"
+                  max="850"
+                  value={tempScore}
+                  onChange={(e) => setTempScore(e.target.value)}
+                  className="w-20 px-2 py-1 border border-gray-300 rounded text-sm"
+                  onKeyPress={(e) => e.key === 'Enter' && handleScoreUpdate()}
+                />
+                <Button size="sm" onClick={handleScoreUpdate}>
+                  Save
+                </Button>
+                <Button 
+                  size="sm" 
+                  variant="ghost" 
+                  onClick={() => {
+                    setEditingScore(false);
+                    setTempScore(baseScore.toString());
+                  }}
+                >
+                  Cancel
+                </Button>
+              </div>
+            ) : (
+              <button
+                onClick={() => {
+                  setEditingScore(true);
+                  setTempScore(baseScore.toString());
+                }}
+                className="font-semibold text-blue-600 hover:text-blue-700 underline"
+              >
+                {baseScore}
+              </button>
+            )}
+          </div>
         </div>
         
         {/* Dashboard Grid */}
@@ -138,9 +453,13 @@ export default function Home() {
             <TabsTrigger value="risks">Risks</TabsTrigger>
             <TabsTrigger value="plan">Action Plan</TabsTrigger>
           </TabsList>
-          
+
           <TabsContent value="scenarios" className="space-y-6">
-            <ScenarioBuilder onAddScenario={addScenario} />
+            <ScenarioBuilder 
+              onAddScenario={addScenario}
+              currentScore={currentScore}
+              existingScenarios={scenarios}
+            />
             
             <div className="space-y-4">
               <div className="flex items-center justify-between">
@@ -178,26 +497,42 @@ export default function Home() {
           </TabsContent>
           
           <TabsContent value="analysis">
-            <ExplanationPanel 
+            <AIAnalysisPanel 
               scenarios={scenarios}
-              totalImpact={totalImpact}
               currentScore={currentScore}
               baseScore={baseScore}
+              simulationId={simulationId}
+              userId={user?.id || ''}
             />
           </TabsContent>
           
           <TabsContent value="risks">
-            <RiskAnalysis scenarios={scenarios} currentScore={currentScore} />
+            <AIRiskAnalysis 
+              scenarios={scenarios}
+              currentScore={currentScore}
+              simulationId={simulationId}
+              userId={user?.id || ''}
+            />
           </TabsContent>
           
           <TabsContent value="plan">
-            <ImprovementPlan 
+            <AIActionPlan 
               currentScore={currentScore}
               scenarios={scenarios}
+              simulationId={simulationId}
+              userId={user?.id || ''}
             />
           </TabsContent>
         </Tabs>
       </div>
     </div>
+  );
+}
+
+export default function Home() {
+  return (
+    <ProtectedRoute>
+      <HomePage />
+    </ProtectedRoute>
   );
 }

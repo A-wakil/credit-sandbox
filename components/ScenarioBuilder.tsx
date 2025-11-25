@@ -3,11 +3,15 @@ import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Label } from './ui/label';
-import { Plus, CreditCard, DollarSign, Landmark, Search, Calendar, TrendingUp } from 'lucide-react';
+import { Textarea } from './ui/textarea';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
+import { Plus, CreditCard, DollarSign, Landmark, Search, Calendar, TrendingUp, Sparkles, Loader2 } from 'lucide-react';
 import { Scenario } from '../app/page';
 
 interface ScenarioBuilderProps {
   onAddScenario: (scenario: Omit<Scenario, 'id' | 'addedAt'>) => void;
+  currentScore: number;
+  existingScenarios: Scenario[];
 }
 
 const scenarioTemplates = {
@@ -58,9 +62,12 @@ const scenarioIcons = {
   account_age: Calendar
 };
 
-export function ScenarioBuilder({ onAddScenario }: ScenarioBuilderProps) {
+export function ScenarioBuilder({ onAddScenario, currentScore, existingScenarios }: ScenarioBuilderProps) {
   const [selectedType, setSelectedType] = useState<string>('');
   const [selectedTemplate, setSelectedTemplate] = useState<string>('');
+  const [customScenario, setCustomScenario] = useState('');
+  const [analyzing, setAnalyzing] = useState(false);
+  const [error, setError] = useState('');
   
   const handleAddScenario = () => {
     if (!selectedType || !selectedTemplate) return;
@@ -79,6 +86,57 @@ export function ScenarioBuilder({ onAddScenario }: ScenarioBuilderProps) {
     
     setSelectedTemplate('');
   };
+
+  const handleAnalyzeCustomScenario = async () => {
+    if (!customScenario.trim()) return;
+    
+    setAnalyzing(true);
+    setError('');
+
+    try {
+      const response = await fetch('/api/analyze-scenario', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          currentScore,
+          scenarioDescription: customScenario,
+          existingScenarios: existingScenarios.map(s => ({
+            type: s.type,
+            action: s.action,
+            description: s.description,
+          })),
+        }),
+      });
+
+      if (!response.ok) throw new Error('Failed to analyze scenario');
+
+      const analysis = await response.json();
+
+      // Determine scenario type based on description (simple heuristic)
+      let type: Scenario['type'] = 'payment';
+      const lowerDesc = customScenario.toLowerCase();
+      if (lowerDesc.includes('card') || lowerDesc.includes('credit card')) type = 'credit_card';
+      else if (lowerDesc.includes('loan') || lowerDesc.includes('mortgage')) type = 'loan';
+      else if (lowerDesc.includes('inquiry') || lowerDesc.includes('apply')) type = 'inquiry';
+      else if (lowerDesc.includes('limit') || lowerDesc.includes('utilization')) type = 'credit_limit';
+      else if (lowerDesc.includes('age') || lowerDesc.includes('old') || lowerDesc.includes('close')) type = 'account_age';
+
+      onAddScenario({
+        type,
+        action: customScenario.substring(0, 50) + (customScenario.length > 50 ? '...' : ''),
+        impact: analysis.impactPoints,
+        timeframe: analysis.timeframeMonths,
+        description: analysis.explanation,
+      });
+
+      setCustomScenario('');
+    } catch (err) {
+      setError('Failed to analyze scenario. Please try again.');
+      console.error(err);
+    } finally {
+      setAnalyzing(false);
+    }
+  };
   
   const getTypeLabel = (type: string) => {
     return type.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
@@ -91,8 +149,18 @@ export function ScenarioBuilder({ onAddScenario }: ScenarioBuilderProps) {
           <Plus className="size-5 text-blue-600" />
           <h2>Add Financial Scenario</h2>
         </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+        <Tabs defaultValue="quick" className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="quick">Quick Select</TabsTrigger>
+            <TabsTrigger value="custom">
+              <Sparkles className="mr-2 h-4 w-4" />
+              AI Custom
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="quick" className="space-y-4 mt-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Scenario Type Selection */}
           <div className="space-y-2">
             <Label>Scenario Category</Label>
@@ -144,36 +212,78 @@ export function ScenarioBuilder({ onAddScenario }: ScenarioBuilderProps) {
               </SelectContent>
             </Select>
           </div>
-        </div>
-        
-        {/* Preview */}
-        {selectedType && selectedTemplate && (
-          <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg space-y-2">
-            <p className="text-sm">
-              {scenarioTemplates[selectedType as keyof typeof scenarioTemplates][parseInt(selectedTemplate)].description}
-            </p>
-            <div className="flex items-center gap-4 text-sm">
-              <span className="text-gray-600">
-                Impact: <span className={scenarioTemplates[selectedType as keyof typeof scenarioTemplates][parseInt(selectedTemplate)].impact > 0 ? 'text-green-600' : 'text-red-600'}>
-                  {scenarioTemplates[selectedType as keyof typeof scenarioTemplates][parseInt(selectedTemplate)].impact > 0 ? '+' : ''}
-                  {scenarioTemplates[selectedType as keyof typeof scenarioTemplates][parseInt(selectedTemplate)].impact} points
-                </span>
-              </span>
-              <span className="text-gray-600">
-                Timeframe: {scenarioTemplates[selectedType as keyof typeof scenarioTemplates][parseInt(selectedTemplate)].timeframe} months
-              </span>
             </div>
-          </div>
-        )}
-        
-        <Button 
-          onClick={handleAddScenario}
-          disabled={!selectedType || !selectedTemplate}
-          className="w-full"
-        >
-          <Plus className="size-4 mr-2" />
-          Add Scenario
-        </Button>
+            
+            {/* Preview */}
+            {selectedType && selectedTemplate && (
+              <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg space-y-2">
+                <p className="text-sm">
+                  {scenarioTemplates[selectedType as keyof typeof scenarioTemplates][parseInt(selectedTemplate)].description}
+                </p>
+                <div className="flex items-center gap-4 text-sm">
+                  <span className="text-gray-600">
+                    Impact: <span className={scenarioTemplates[selectedType as keyof typeof scenarioTemplates][parseInt(selectedTemplate)].impact > 0 ? 'text-green-600' : 'text-red-600'}>
+                      {scenarioTemplates[selectedType as keyof typeof scenarioTemplates][parseInt(selectedTemplate)].impact > 0 ? '+' : ''}
+                      {scenarioTemplates[selectedType as keyof typeof scenarioTemplates][parseInt(selectedTemplate)].impact} points
+                    </span>
+                  </span>
+                  <span className="text-gray-600">
+                    Timeframe: {scenarioTemplates[selectedType as keyof typeof scenarioTemplates][parseInt(selectedTemplate)].timeframe} months
+                  </span>
+                </div>
+              </div>
+            )}
+            
+            <Button 
+              onClick={handleAddScenario}
+              disabled={!selectedType || !selectedTemplate}
+              className="w-full"
+            >
+              <Plus className="size-4 mr-2" />
+              Add Scenario
+            </Button>
+          </TabsContent>
+
+          <TabsContent value="custom" className="space-y-4 mt-4">
+            <div className="space-y-2">
+              <Label>Describe Your Financial Scenario</Label>
+              <Textarea
+                placeholder="Example: I want to apply for a new credit card with a $5,000 limit while keeping my utilization under 20%..."
+                value={customScenario}
+                onChange={(e) => setCustomScenario(e.target.value)}
+                rows={4}
+                disabled={analyzing}
+              />
+              <p className="text-xs text-gray-500">
+                AI will analyze your scenario considering your current score of {currentScore} and existing scenarios.
+              </p>
+            </div>
+
+            {error && (
+              <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">
+                {error}
+              </div>
+            )}
+
+            <Button 
+              onClick={handleAnalyzeCustomScenario}
+              disabled={!customScenario.trim() || analyzing}
+              className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+            >
+              {analyzing ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Analyzing with AI...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="mr-2 h-4 w-4" />
+                  Analyze with AI
+                </>
+              )}
+            </Button>
+          </TabsContent>
+        </Tabs>
       </div>
     </Card>
   );
