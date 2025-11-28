@@ -92,9 +92,17 @@ export function ScenarioCard({ scenario, onRemove, onSelect, isSelected }: Scena
             </span>
           </div>
           
-          <div className="flex items-center gap-1 text-xs text-gray-500">
-            <Clock className="size-3" />
-            <span>{scenario.timeframe} {scenario.timeframe === 1 ? 'month' : 'months'}</span>
+          <div className="flex items-center gap-3 text-xs text-gray-500">
+            <div className="flex items-center gap-1">
+              <Clock className="size-3" />
+              <span>{scenario.timeframe} {scenario.timeframe === 1 ? 'month' : 'months'}</span>
+            </div>
+            {scenario.month && (
+              <div className="flex items-center gap-1 text-blue-600">
+                <Calendar className="size-3" />
+                <span className="font-medium">{scenario.month}</span>
+              </div>
+            )}
           </div>
         </div>
       </div>

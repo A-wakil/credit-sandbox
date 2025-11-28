@@ -68,7 +68,35 @@ export function ScenarioBuilder({ onAddScenario, currentScore, existingScenarios
   const [customScenario, setCustomScenario] = useState('');
   const [analyzing, setAnalyzing] = useState(false);
   const [error, setError] = useState('');
+  const [selectedMonth, setSelectedMonth] = useState<string>('');
   
+  // Generate month+year options starting from current month, extending 3 years into the future
+  const generateMonthYearOptions = () => {
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth(); // 0-11
+    const options: string[] = [];
+    
+    const monthNames = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+    
+    // Start from current month, go 3 years into the future
+    for (let yearOffset = 0; yearOffset < 3; yearOffset++) {
+      const year = currentYear + yearOffset;
+      const startMonth = yearOffset === 0 ? currentMonth : 0;
+      
+      for (let month = startMonth; month < 12; month++) {
+        options.push(`${monthNames[month]} ${year}`);
+      }
+    }
+    
+    return options;
+  };
+  
+  const monthYearOptions = generateMonthYearOptions();
+
   const handleAddScenario = () => {
     if (!selectedType || !selectedTemplate) return;
     
@@ -81,10 +109,12 @@ export function ScenarioBuilder({ onAddScenario, currentScore, existingScenarios
       action: template.action,
       impact: template.impact,
       timeframe: template.timeframe,
-      description: template.description
+      description: template.description,
+      month: selectedMonth
     });
     
     setSelectedTemplate('');
+    setSelectedMonth('');
   };
 
   const handleAnalyzeCustomScenario = async () => {
@@ -160,7 +190,7 @@ export function ScenarioBuilder({ onAddScenario, currentScore, existingScenarios
           </TabsList>
 
           <TabsContent value="quick" className="space-y-4 mt-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Scenario Type Selection */}
           <div className="space-y-2">
             <Label>Scenario Category</Label>
@@ -211,32 +241,58 @@ export function ScenarioBuilder({ onAddScenario, currentScore, existingScenarios
                 ))}
               </SelectContent>
             </Select>
+          
           </div>
-            </div>
-            
-            {/* Preview */}
-            {selectedType && selectedTemplate && (
-              <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg space-y-2">
-                <p className="text-sm">
-                  {scenarioTemplates[selectedType as keyof typeof scenarioTemplates][parseInt(selectedTemplate)].description}
-                </p>
-                <div className="flex items-center gap-4 text-sm">
-                  <span className="text-gray-600">
-                    Impact: <span className={scenarioTemplates[selectedType as keyof typeof scenarioTemplates][parseInt(selectedTemplate)].impact > 0 ? 'text-green-600' : 'text-red-600'}>
-                      {scenarioTemplates[selectedType as keyof typeof scenarioTemplates][parseInt(selectedTemplate)].impact > 0 ? '+' : ''}
-                      {scenarioTemplates[selectedType as keyof typeof scenarioTemplates][parseInt(selectedTemplate)].impact} points
-                    </span>
+          
+          {/* Month & Year Selection */}
+          <div className="space-y-2">
+            <Label>Target Month & Year</Label>
+            <Select 
+              value={selectedMonth} 
+              onValueChange={setSelectedMonth}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select month & year..." />
+              </SelectTrigger>
+              <SelectContent className="max-h-[300px]">
+                {monthYearOptions.map((monthYear) => (
+                  <SelectItem key={monthYear} value={monthYear}>
+                    {monthYear}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          </div>
+          
+          {/* Preview */}
+          {selectedType && selectedTemplate && (
+            <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg space-y-2">
+              <p className="text-sm">
+                {scenarioTemplates[selectedType as keyof typeof scenarioTemplates][parseInt(selectedTemplate)].description}
+              </p>
+              <div className="flex items-center gap-4 text-sm flex-wrap">
+                <span className="text-gray-600">
+                  Impact: <span className={scenarioTemplates[selectedType as keyof typeof scenarioTemplates][parseInt(selectedTemplate)].impact > 0 ? 'text-green-600' : 'text-red-600'}>
+                    {scenarioTemplates[selectedType as keyof typeof scenarioTemplates][parseInt(selectedTemplate)].impact > 0 ? '+' : ''}
+                    {scenarioTemplates[selectedType as keyof typeof scenarioTemplates][parseInt(selectedTemplate)].impact} points
                   </span>
+                </span>
+                <span className="text-gray-600">
+                  Timeframe: {scenarioTemplates[selectedType as keyof typeof scenarioTemplates][parseInt(selectedTemplate)].timeframe} months
+                </span>
+                {selectedMonth && (
                   <span className="text-gray-600">
-                    Timeframe: {scenarioTemplates[selectedType as keyof typeof scenarioTemplates][parseInt(selectedTemplate)].timeframe} months
+                    Target Month: <span className="font-medium text-blue-600">{selectedMonth}</span>
                   </span>
-                </div>
+                )}
               </div>
-            )}
+            </div>
+          )}
             
             <Button 
               onClick={handleAddScenario}
-              disabled={!selectedType || !selectedTemplate}
+              disabled={!selectedType || !selectedTemplate || !selectedMonth}
               className="w-full"
             >
               <Plus className="size-4 mr-2" />

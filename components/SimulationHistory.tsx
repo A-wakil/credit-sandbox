@@ -118,68 +118,119 @@ export function SimulationHistory({ onLoadSimulation, currentSimulationId }: Sim
             )}
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-80">
-          <DropdownMenuLabel>Saved Simulations</DropdownMenuLabel>
-          <DropdownMenuSeparator />
-          {simulations.length === 0 ? (
-            <div className="p-4 text-center text-sm text-gray-500">
-              No saved simulations yet
-            </div>
-          ) : (
-            <div className="max-h-96 overflow-y-auto">
-              {simulations.map((sim) => {
-                const impact = sim.projected_score - sim.base_score;
-                const isActive = sim.id === currentSimulationId;
+        <DropdownMenuContent align="end" className="w-96 p-0 bg-white border-2 border-blue-200 shadow-xl">
+          <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-4 text-white">
+            <DropdownMenuLabel className="text-white font-semibold text-base px-0">
+              <div className="flex items-center gap-2">
+                <History className="h-5 w-5" />
+                Simulation History
+              </div>
+            </DropdownMenuLabel>
+            {simulations.length > 0 && (
+              <p className="text-blue-100 text-xs mt-1 px-0">
+                {simulations.length} saved simulation{simulations.length !== 1 ? 's' : ''}
+              </p>
+            )}
+          </div>
+          <div className="max-h-96 overflow-y-auto">
+            {simulations.length === 0 ? (
+              <div className="p-8 text-center">
+                <History className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                <p className="text-sm font-medium text-gray-600 mb-1">No saved simulations</p>
+                <p className="text-xs text-gray-500">Create and save scenarios to see them here</p>
+              </div>
+            ) : (
+              <div className="divide-y divide-gray-100">
+                {simulations.map((sim) => {
+                  const impact = sim.projected_score - sim.base_score;
+                  const isActive = sim.id === currentSimulationId;
 
-                return (
-                  <DropdownMenuItem
-                    key={sim.id}
-                    className="flex flex-col items-start gap-2 p-3 cursor-pointer"
-                    onClick={() => onLoadSimulation(sim.id)}
-                  >
-                    <div className="flex items-center justify-between w-full">
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium text-sm truncate max-w-[180px]">
-                          {sim.name || 'Untitled'}
-                        </span>
-                        {isActive && (
-                          <Badge variant="default" className="text-xs">
-                            Current
-                          </Badge>
-                        )}
+                  return (
+                    <div
+                      key={sim.id}
+                      className={`p-4 cursor-pointer transition-colors ${
+                        isActive 
+                          ? 'bg-blue-50 border-l-4 border-blue-600' 
+                          : 'hover:bg-gray-50'
+                      }`}
+                      onClick={() => onLoadSimulation(sim.id)}
+                    >
+                      <div className="flex items-start justify-between gap-3 mb-2">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className={`font-semibold text-sm truncate ${
+                              isActive ? 'text-blue-700' : 'text-gray-900'
+                            }`}>
+                              {sim.name || 'Untitled Simulation'}
+                            </span>
+                            {isActive && (
+                              <Badge className="bg-blue-600 text-white text-xs px-2 py-0.5">
+                                Active
+                              </Badge>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2 text-xs text-gray-500">
+                            <span className="flex items-center gap-1">
+                              <Clock className="h-3 w-3" />
+                              {new Date(sim.created_at).toLocaleDateString('en-US', { 
+                                month: 'short', 
+                                day: 'numeric', 
+                                year: 'numeric' 
+                              })}
+                            </span>
+                            {sim.scenarios_count > 0 && (
+                              <>
+                                <span>•</span>
+                                <span>{sim.scenarios_count} scenario{sim.scenarios_count !== 1 ? 's' : ''}</span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDeleteId(sim.id);
+                          }}
+                          className="text-gray-400 hover:text-red-600 p-1.5 rounded hover:bg-red-50 transition-colors shrink-0"
+                          title="Delete simulation"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
                       </div>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setDeleteId(sim.id);
-                        }}
-                        className="text-red-600 hover:text-red-700 p-1"
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </button>
+                      <div className="flex items-center gap-4 mt-3 pt-3 border-t border-gray-100">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-gray-500">Score:</span>
+                          <span className="font-mono font-semibold text-sm text-gray-700">
+                            {sim.base_score}
+                          </span>
+                          <span className="text-gray-400">→</span>
+                          <span className={`font-mono font-semibold text-sm ${
+                            impact > 0 ? 'text-green-600' : impact < 0 ? 'text-red-600' : 'text-gray-700'
+                          }`}>
+                            {sim.projected_score}
+                          </span>
+                        </div>
+                        <div className={`flex items-center gap-1 px-2 py-1 rounded-md text-xs font-semibold ${
+                          impact > 0 
+                            ? 'bg-green-100 text-green-700' 
+                            : impact < 0 
+                            ? 'bg-red-100 text-red-700' 
+                            : 'bg-gray-100 text-gray-700'
+                        }`}>
+                          {impact > 0 ? (
+                            <TrendingUp className="h-3 w-3" />
+                          ) : impact < 0 ? (
+                            <TrendingDown className="h-3 w-3" />
+                          ) : null}
+                          {impact > 0 ? '+' : ''}{impact} pts
+                        </div>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-3 text-xs text-gray-600 w-full">
-                      <span className="flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
-                        {new Date(sim.created_at).toLocaleDateString()}
-                      </span>
-                      <span>
-                        {sim.base_score} → {sim.projected_score}
-                      </span>
-                      <span className={`flex items-center gap-1 font-medium ${getImpactColor(sim.base_score, sim.projected_score)}`}>
-                        {impact > 0 ? (
-                          <TrendingUp className="h-3 w-3" />
-                        ) : impact < 0 ? (
-                          <TrendingDown className="h-3 w-3" />
-                        ) : null}
-                        {impact > 0 ? '+' : ''}{impact}
-                      </span>
-                    </div>
-                  </DropdownMenuItem>
-                );
-              })}
-            </div>
-          )}
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </DropdownMenuContent>
       </DropdownMenu>
 

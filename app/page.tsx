@@ -9,6 +9,7 @@ import { AIAnalysisPanel } from '../components/AIAnalysisPanel';
 import { AIRiskAnalysis } from '../components/AIRiskAnalysis';
 import { AIActionPlan } from '../components/AIActionPlan';
 import { SimulationHistory } from '../components/SimulationHistory';
+import { AICreditCoach } from '../components/AICreditCoach';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { TrendingUp, Save, Loader2, RefreshCw } from 'lucide-react';
 import { ProtectedRoute } from '../components/ProtectedRoute';
@@ -34,6 +35,7 @@ export interface Scenario {
   impact: number;
   timeframe: number; // months
   description: string;
+  month?: string; // Target month for the scenario
   addedAt: Date;
 }
 
@@ -41,6 +43,39 @@ export interface TimelinePoint {
   month: number;
   score: number;
   events: string[];
+}
+
+// Helper function to convert "Month Year" format (e.g., "March 2027") to month offset from now
+function getMonthOffset(monthYear: string | undefined): number {
+  if (!monthYear) return 0; // Default to current month (month 0) if no month specified
+  
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth(); // 0-11
+  
+  const monthNames = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
+  
+  // Parse "Month Year" format (e.g., "March 2027")
+  const parts = monthYear.trim().split(' ');
+  if (parts.length < 2) return 0; // Invalid format, default to 0
+  
+  const monthName = parts[0];
+  const year = parseInt(parts[1]);
+  
+  if (isNaN(year)) return 0; // Invalid year, default to 0
+  
+  const monthIndex = monthNames.findIndex(m => m.toLowerCase() === monthName.toLowerCase());
+  if (monthIndex < 0) return 0; // Invalid month name, default to 0
+  
+  // Calculate month offset: (targetYear - currentYear) * 12 + (targetMonth - currentMonth)
+  const yearDiff = year - currentYear;
+  const monthOffset = (yearDiff * 12) + (monthIndex - currentMonth);
+  
+  // Ensure non-negative offset (can't select past months)
+  return Math.max(0, monthOffset);
 }
 
 function calculateScoreImpact(scenarios: Scenario[], baseScore: number): {
@@ -57,14 +92,22 @@ function calculateScoreImpact(scenarios: Scenario[], baseScore: number): {
     let monthlyImpact = 0;
     
     scenarios.forEach(scenario => {
-      const monthsSinceAdded = month;
+      // Get the month offset for this scenario (e.g., "March 2027" -> 16 months from now)
+      const scenarioStartMonth = getMonthOffset(scenario.month);
       
-      if (monthsSinceAdded <= scenario.timeframe) {
+      // Calculate how many months since this scenario started
+      const monthsSinceStarted = month - scenarioStartMonth;
+      
+      // Only apply impact if:
+      // 1. We've reached or passed the start month (monthsSinceStarted >= 0)
+      // 2. We're still within the timeframe (monthsSinceStarted <= scenario.timeframe)
+      if (monthsSinceStarted >= 0 && monthsSinceStarted <= scenario.timeframe) {
         // Distribute impact over timeframe
         const monthlyChange = scenario.impact / scenario.timeframe;
         monthlyImpact += monthlyChange;
         
-        if (monthsSinceAdded === 0) {
+        // Add event when scenario starts
+        if (monthsSinceStarted === 0) {
           events.push(scenario.action);
         }
       }
@@ -525,6 +568,9 @@ function HomePage() {
           </TabsContent>
         </Tabs>
       </div>
+      
+      {/* AI Credit Coach Chatbot */}
+      <AICreditCoach currentScore={currentScore} />
     </div>
   );
 }
