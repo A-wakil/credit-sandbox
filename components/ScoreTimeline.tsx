@@ -17,21 +17,69 @@ export function ScoreTimeline({ timeline, baseScore }: ScoreTimelineProps) {
     return '#ef4444';
   };
   
+  // Helper function to format date labels
+  const formatDateLabel = (monthOffset: number): string => {
+    const now = new Date();
+    const targetDate = new Date(now.getFullYear(), now.getMonth() + monthOffset, 1);
+    
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const month = monthNames[targetDate.getMonth()];
+    const year = targetDate.getFullYear();
+    
+    if (monthOffset === 0) {
+      return 'Now';
+    }
+    
+    // Show year only if it's different from current year or if it's January
+    if (targetDate.getFullYear() !== now.getFullYear() || monthOffset >= 12) {
+      return `${month} ${year}`;
+    }
+    
+    return month;
+  };
+  
+  // Helper function to format full date for tooltip
+  const formatFullDate = (monthOffset: number): string => {
+    const now = new Date();
+    const targetDate = new Date(now.getFullYear(), now.getMonth() + monthOffset, 1);
+    
+    const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 
+                        'July', 'August', 'September', 'October', 'November', 'December'];
+    const month = monthNames[targetDate.getMonth()];
+    const year = targetDate.getFullYear();
+    
+    if (monthOffset === 0) {
+      return `${month} ${year} (Now)`;
+    }
+    
+    return `${month} ${year}`;
+  };
+  
   const chartData = timeline.map(point => ({
     month: point.month,
     score: point.score,
-    label: point.month === 0 ? 'Now' : `${point.month}mo`
+    label: formatDateLabel(point.month),
+    fullDate: formatFullDate(point.month),
+    events: point.events
   }));
   
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload;
       return (
-        <div className="bg-white p-3 rounded-lg shadow-lg border border-gray-200">
-          <p className="text-sm text-gray-600">Month {data.month}</p>
-          <p className="text-lg" style={{ color: getScoreColor(data.score) }}>
+        <div className="bg-white p-3 rounded-lg shadow-lg border border-gray-200 min-w-[200px]">
+          <p className="text-sm font-semibold text-gray-700 mb-1">{data.fullDate}</p>
+          <p className="text-lg font-bold mb-2" style={{ color: getScoreColor(data.score) }}>
             Score: {data.score}
           </p>
+          {data.events && data.events.length > 0 && (
+            <div className="mt-2 pt-2 border-t border-gray-200">
+              <p className="text-xs text-gray-500 mb-1">Events:</p>
+              {data.events.map((event: string, idx: number) => (
+                <p key={idx} className="text-xs text-gray-600">• {event}</p>
+              ))}
+            </div>
+          )}
         </div>
       );
     }
@@ -44,7 +92,7 @@ export function ScoreTimeline({ timeline, baseScore }: ScoreTimelineProps) {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Calendar className="size-5 text-blue-600" />
-            <h2>24-Month Projection</h2>
+            <h2>24-Month Credit Score Projection</h2>
           </div>
           <div className="flex items-center gap-4 text-sm">
             <div className="flex items-center gap-2">
@@ -58,15 +106,18 @@ export function ScoreTimeline({ timeline, baseScore }: ScoreTimelineProps) {
           </div>
         </div>
         
-        <div className="h-64">
+        <div className="h-80">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={chartData}>
+            <LineChart data={chartData} margin={{ top: 5, right: 20, left: 0, bottom: 60 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
               <XAxis 
                 dataKey="label" 
                 stroke="#9ca3af"
-                tick={{ fontSize: 12 }}
+                tick={{ fontSize: 11 }}
                 interval="preserveStartEnd"
+                angle={-45}
+                textAnchor="end"
+                height={60}
               />
               <YAxis 
                 domain={[300, 850]}
