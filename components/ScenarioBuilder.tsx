@@ -157,9 +157,11 @@ export function ScenarioBuilder({ onAddScenario, currentScore, existingScenarios
         impact: analysis.impactPoints,
         timeframe: analysis.timeframeMonths,
         description: analysis.explanation,
+        month: selectedMonth, // Include selected month
       });
 
       setCustomScenario('');
+      setSelectedMonth(''); // Reset month selection
     } catch (err) {
       setError('Failed to analyze scenario. Please try again.');
       console.error(err);
@@ -312,6 +314,30 @@ export function ScenarioBuilder({ onAddScenario, currentScore, existingScenarios
               />
               <p className="text-xs text-gray-500">
                 AI will analyze your scenario considering your current score of {currentScore} and existing scenarios.
+              </p>
+            </div>
+
+            {/* Month & Year Selection for AI Custom */}
+            <div className="space-y-2">
+              <Label>Target Month & Year (Optional)</Label>
+              <Select 
+                value={selectedMonth} 
+                onValueChange={setSelectedMonth}
+                disabled={analyzing}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select month & year (optional)..." />
+                </SelectTrigger>
+                <SelectContent className="max-h-[300px]">
+                  {monthYearOptions.map((monthYear) => (
+                    <SelectItem key={monthYear} value={monthYear}>
+                      {monthYear}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-gray-500">
+                When should this scenario take effect? Leave blank to start immediately.
               </p>
             </div>
 
