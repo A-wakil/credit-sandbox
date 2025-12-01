@@ -1,93 +1,59 @@
-# AI Credit Sandbox - Technology Requirements
-# Academic Submission - Technology Stack
+# Node.js Dependencies (generated from package.json)
 
-# ====================
-# Core Framework
-# ====================
-Next.js==15.1.3
-React==19.0.0
-React-DOM==19.0.0
-TypeScript==5.x
+# Dependencies
+@radix-ui/react-accordion@^1.2.3
+@radix-ui/react-alert-dialog@^1.1.6
+@radix-ui/react-aspect-ratio@^1.1.2
+@radix-ui/react-avatar@^1.1.3
+@radix-ui/react-checkbox@^1.1.4
+@radix-ui/react-collapsible@^1.1.3
+@radix-ui/react-context-menu@^2.2.6
+@radix-ui/react-dialog@^1.1.6
+@radix-ui/react-dropdown-menu@^2.1.6
+@radix-ui/react-hover-card@^1.1.6
+@radix-ui/react-label@^2.1.2
+@radix-ui/react-menubar@^1.1.6
+@radix-ui/react-navigation-menu@^1.2.5
+@radix-ui/react-popover@^1.1.6
+@radix-ui/react-progress@^1.1.2
+@radix-ui/react-radio-group@^1.2.3
+@radix-ui/react-scroll-area@^1.2.3
+@radix-ui/react-select@^2.1.6
+@radix-ui/react-separator@^1.1.2
+@radix-ui/react-slider@^1.2.3
+@radix-ui/react-slot@^1.1.2
+@radix-ui/react-switch@^1.1.3
+@radix-ui/react-tabs@^1.1.3
+@radix-ui/react-toggle@^1.1.2
+@radix-ui/react-toggle-group@^1.1.2
+@radix-ui/react-tooltip@^1.1.8
+@supabase/auth-helpers-nextjs@^0.10.0
+@supabase/supabase-js@^2.84.0
+class-variance-authority@^0.7.1
+cmdk@^1.1.1
+embla-carousel-react@^8.6.0
+input-otp@^1.4.2
+lucide-react@^0.554.0
+motion@^12.23.24
+next@16.0.4
+next-themes@^0.4.6
+openai@^6.9.1
+react@19.2.0
+react-day-picker@^9.11.2
+react-dom@19.2.0
+react-hook-form@^7.66.1
+react-resizable-panels@^3.0.6
+recharts@^3.5.0
+sonner@^2.0.7
+tailwind-merge@^3.4.0
+vaul@^1.1.2
 
-# ====================
-# AI/ML Integration
-# ====================
-openai==4.x
-# OpenAI GPT-4o-mini model for:
-# - Custom scenario analysis
-# - Credit score impact prediction
-# - Risk assessment generation
-# - Personalized action plan creation
-
-# ====================
-# Database & Authentication
-# ====================
-@supabase/supabase-js==2.x
-@supabase/auth-helpers-nextjs==0.x
-
-
-# ====================
-# UI Components & Styling
-# ====================
-tailwindcss==3.x
-@radix-ui/react-dialog==1.x
-@radix-ui/react-dropdown-menu==2.x
-@radix-ui/react-tabs==1.x
-@radix-ui/react-alert-dialog==1.x
-lucide-react==0.x
-
-# ====================
-# Data Visualization
-# ====================
-recharts==2.x
-# For credit score timeline charts
-# Interactive score projections
-
-# ====================
-# Runtime Environment
-# ====================
-Node.js==22.12.0
-npm==10.x
-
-# ====================
-# Required Environment Variables
-# ====================
-# NEXT_PUBLIC_SUPABASE_URL=your-supabase-url
-# NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
-# SUPABASE_SERVICE_ROLE_KEY=your-service-key
-# OPENAI_API_KEY=your-openai-key
-
-# ====================
-# Installation Instructions
-# ====================
-# 1. Install Node.js 22.x from https://nodejs.org/
-# 2. Clone the repository
-# 3. Run: npm install
-# 4. Configure .env file with required keys
-# 5. Run: npm run dev
-# 6. Access at: http://localhost:3000
-
-# ====================
-# Key Features Using AI
-# ====================
-# - Custom scenario analysis (OpenAI GPT-4o-mini)
-# - Credit score impact predictions
-# - Risk assessment and mitigation strategies
-# - Personalized improvement action plans
-# - Natural language scenario input
-# - Real-time credit score calculations
-
-# ====================
-# Database Tables
-# ====================
-# - user_profiles
-# - credit_profiles
-# - simulations
-# - scenarios
-# - simulation_ai_analysis
-# - simulation_risk_analysis
-# - simulation_action_plans
-# - user_activity_log
-# - saved_improvement_plans
-# - timeline_projections
-
+# DevDependencies
+@tailwindcss/postcss@^4
+@types/node@^20
+@types/react@^19
+@types/react-dom@^19
+eslint@^9
+eslint-config-next@16.0.4
+tailwindcss@^4
+typescript@^5
