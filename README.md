@@ -65,7 +65,7 @@ Alternatively, you can use yarn:
 yarn install
 ```
 
-### 4. Set Up Environment Variables
+### 3. Set Up Environment Variables
 
 Create a `.env.local` file in the root directory and add your environment variables:
 
@@ -81,7 +81,7 @@ OPENAI_API_KEY=your_openai_api_key
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 ```
 
-### 5. Run the Development Server
+### 4. Run the Development Server
 
 Start the development server:
 

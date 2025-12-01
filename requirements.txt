@@ -1,0 +1,93 @@
+# AI Credit Sandbox - Technology Requirements
+# Academic Submission - Technology Stack
+
+# ====================
+# Core Framework
+# ====================
+Next.js==15.1.3
+React==19.0.0
+React-DOM==19.0.0
+TypeScript==5.x
+
+# ====================
+# AI/ML Integration
+# ====================
+openai==4.x
+# OpenAI GPT-4o-mini model for:
+# - Custom scenario analysis
+# - Credit score impact prediction
+# - Risk assessment generation
+# - Personalized action plan creation
+
+# ====================
+# Database & Authentication
+# ====================
+@supabase/supabase-js==2.x
+@supabase/auth-helpers-nextjs==0.x
+
+
+# ====================
+# UI Components & Styling
+# ====================
+tailwindcss==3.x
+@radix-ui/react-dialog==1.x
+@radix-ui/react-dropdown-menu==2.x
+@radix-ui/react-tabs==1.x
+@radix-ui/react-alert-dialog==1.x
+lucide-react==0.x
+
+# ====================
+# Data Visualization
+# ====================
+recharts==2.x
+# For credit score timeline charts
+# Interactive score projections
+
+# ====================
+# Runtime Environment
+# ====================
+Node.js==22.12.0
+npm==10.x
+
+# ====================
+# Required Environment Variables
+# ====================
+# NEXT_PUBLIC_SUPABASE_URL=your-supabase-url
+# NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+# SUPABASE_SERVICE_ROLE_KEY=your-service-key
+# OPENAI_API_KEY=your-openai-key
+
+# ====================
+# Installation Instructions
+# ====================
+# 1. Install Node.js 22.x from https://nodejs.org/
+# 2. Clone the repository
+# 3. Run: npm install
+# 4. Configure .env file with required keys
+# 5. Run: npm run dev
+# 6. Access at: http://localhost:3000
+
+# ====================
+# Key Features Using AI
+# ====================
+# - Custom scenario analysis (OpenAI GPT-4o-mini)
+# - Credit score impact predictions
+# - Risk assessment and mitigation strategies
+# - Personalized improvement action plans
+# - Natural language scenario input
+# - Real-time credit score calculations
+
+# ====================
+# Database Tables
+# ====================
+# - user_profiles
+# - credit_profiles
+# - simulations
+# - scenarios
+# - simulation_ai_analysis
+# - simulation_risk_analysis
+# - simulation_action_plans
+# - user_activity_log
+# - saved_improvement_plans
+# - timeline_projections
+
